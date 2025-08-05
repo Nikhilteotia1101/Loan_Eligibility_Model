@@ -10,15 +10,13 @@ scaler = pickle.load(open("scaler.pkl", "rb"))
 # Setup logging
 os.makedirs("logs", exist_ok=True)
 logging.basicConfig(
-    filename="logs/app.log",
+    filename="app.log",
     filemode="a",
     format="%(asctime)s - %(levelname)s - %(message)s",
     level=logging.INFO
 )
 
-
 st.title("Loan Eligibility Prediction App")
-
 
 # Input fields
 income = st.number_input("Applicant's Monthly Income", min_value=0)
