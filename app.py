@@ -1,7 +1,8 @@
-
 import streamlit as st
 import pickle
 import numpy as np
+import logging
+
 
 # Load trained model and scaler
 model = pickle.load(open("model.pkl", "rb"))
