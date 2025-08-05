@@ -1,59 +1,56 @@
 
 import streamlit as st
-import pickle
-import numpy as np
+import logging
+import os
+from src.model import load_model, load_scaler
+from src.predictor import make_prediction
 
-# Load trained model and scaler
-model = pickle.load(open("model.pkl", "rb"))
-scaler = pickle.load(open("scaler.pkl", "rb"))
+# Setup logging
+os.makedirs("logs", exist_ok=True)
+logging.basicConfig(
+    filename="logs/app.log",
+    filemode="a",
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 
-st.title("Loan Eligibility Prediction App")
+st.set_page_config(page_title="Loan Eligibility Predictor", layout="centered")
+st.title("🏦 Loan Eligibility Prediction App")
+st.markdown("---")
 
-# Input fields
-income = st.number_input("Applicant's Monthly Income", min_value=0)
-coincome = st.number_input("Co-Applicant's Monthly Income", min_value=0)
-loan_amount = st.number_input("Loan Amount", min_value=0)
-loan_term = st.selectbox("Loan Term (in months)", [12, 36, 60, 84, 120, 180, 240, 300, 360, 480])
-credit_history = st.selectbox("Credit History", [1, 0])
+try:
+    model = load_model("models/model.pkl")
+    scaler = load_scaler("models/scaler.pkl")
+    logging.info("Model and scaler loaded successfully.")
+except Exception as e:
+    logging.exception("Failed to load model or scaler.")
+    st.error("❌ Error loading model or scaler. Please check logs.")
+    st.stop()
 
-gender = st.selectbox("Gender", ["Male", "Female"])
-married = st.selectbox("Married", ["Yes", "No"])
-dependents = st.selectbox("Dependents", ["0", "1", "2", "3+"])
-education = st.selectbox("Education", ["Graduate", "Not Graduate"])
-self_employed = st.selectbox("Self Employed", ["Yes", "No"])
-property_area = st.selectbox("Property Area", ["Urban", "Semiurban", "Rural"])
+# User inputs
+income = st.number_input("Applicant's Monthly Income (₹)", min_value=0)
+coincome = st.number_input("Co-Applicant's Monthly Income (₹)", min_value=0)
+loan_amount = st.number_input("Loan Amount (₹)", min_value=0)
+loan_term = st.selectbox("Loan Term (in months)", [12, 36, 60, 84, 120, 180, 240, 300, 360])
+credit_history = st.radio("Credit History", [1, 0], format_func=lambda x: "Good (1)" if x == 1 else "Bad (0)")
+gender = st.radio("Gender", [1, 0], format_func=lambda x: "Male" if x == 1 else "Female")
+married = st.radio("Married", [1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
+education = st.radio("Education", [1, 0], format_func=lambda x: "Graduate" if x == 1 else "Not Graduate")
+self_employed = st.radio("Self-Employed", [1, 0], format_func=lambda x: "Yes" if x == 1 else "No")
+property_area = st.selectbox("Property Area", [0, 1, 2], format_func=lambda x: ["Rural", "Semiurban", "Urban"][x])
 
-if st.button("Submit"):
-    # One-hot encode the inputs
-    gender_female = 1 if gender == "Female" else 0
-    gender_male = 1 if gender == "Male" else 0
-    married_no = 1 if married == "No" else 0
-    married_yes = 1 if married == "Yes" else 0
-    dep_0 = 1 if dependents == "0" else 0
-    dep_1 = 1 if dependents == "1" else 0
-    dep_2 = 1 if dependents == "2" else 0
-    dep_3p = 1 if dependents == "3+" else 0
-    edu_grad = 1 if education == "Graduate" else 0
-    edu_not = 1 if education == "Not Graduate" else 0
-    self_no = 1 if self_employed == "No" else 0
-    self_yes = 1 if self_employed == "Yes" else 0
-    area_rural = 1 if property_area == "Rural" else 0
-    area_semi = 1 if property_area == "Semiurban" else 0
-    area_urban = 1 if property_area == "Urban" else 0
-
-    features = [[
-        income, coincome, loan_amount, loan_term, credit_history,
-        gender_female, gender_male, married_no, married_yes,
-        dep_0, dep_1, dep_2, dep_3p,
-        edu_grad, edu_not, self_no, self_yes,
-        area_rural, area_semi, area_urban
-    ]]
-
-    # Scale features
-    scaled_features = scaler.transform(features)
-
-    prediction = model.predict(scaled_features)
-    if prediction[0] == 1:
-        st.success("✅ Loan Approved!")
-    else:
-        st.error("❌ Loan Not Approved.")
+if st.button("Predict Eligibility"):
+    try:
+        result = make_prediction(
+            model, scaler, income, coincome, loan_amount, loan_term,
+            credit_history, gender, married, education, self_employed, property_area
+        )
+        if result == 1:
+            st.success("✅ Eligible for Loan")
+            logging.info("Prediction: Eligible")
+        else:
+            st.error("❌ Not Eligible for Loan")
+            logging.info("Prediction: Not Eligible")
+    except Exception as e:
+        st.error("❌ Prediction failed. Check logs.")
+        logging.exception("Error during prediction")
