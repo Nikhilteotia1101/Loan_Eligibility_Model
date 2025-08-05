@@ -7,13 +7,11 @@ import numpy as np
 model = pickle.load(open("model.pkl", "rb"))
 scaler = pickle.load(open("scaler.pkl", "rb"))
 
-# Setup logging
-os.makedirs("logs", exist_ok=True)
+# ------------------- Setup Logging -------------------
 logging.basicConfig(
-    filename="app.log",
-    filemode="a",
-    format="%(asctime)s - %(levelname)s - %(message)s",
-    level=logging.INFO
+    filename="loan_app.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
 st.title("Loan Eligibility Prediction App")
